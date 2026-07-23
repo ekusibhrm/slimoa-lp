@@ -17,11 +17,13 @@ export default function CountUp({
   duration?: number;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const [reducedMotion] = useState(prefersReducedMotion);
-  const [value, setValue] = useState(reducedMotion ? target : 0);
+  // SSR/no-JS renders the final value so the markup is correct without
+  // JavaScript; the effect below overwrites it with a 0 -> target
+  // animation once the element scrolls into view.
+  const [value, setValue] = useState(target);
 
   useEffect(() => {
-    if (reducedMotion) return;
+    if (prefersReducedMotion()) return;
     const el = ref.current;
     if (!el) return;
 
@@ -30,6 +32,7 @@ export default function CountUp({
         if (!entry.isIntersecting) return;
         observer.unobserve(el);
 
+        setValue(0);
         const start = performance.now();
         function tick(now: number) {
           const progress = Math.min((now - start) / duration, 1);
@@ -44,7 +47,7 @@ export default function CountUp({
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, [reducedMotion, target, duration]);
+  }, [target, duration]);
 
   return <span ref={ref}>{value}</span>;
 }
